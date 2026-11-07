@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>A.O.F. Tactical Agent Device</title>
+  <link rel="preconnect" href="https://googleapis.com">
+  <link rel="preconnect" href="https://gstatic.com" crossorigin>
+  <link href="https://googleapis.com/css2?family=Roboto+Mono:wght@300;400;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      background-color: #000000;
+      color: #ff6600; 
+      font-family: 'Roboto Mono', monospace;
+      margin: 0;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: 5px;
+      color: #ff6600;
+      text-shadow: 0 0 8px rgba(255, 102, 0, 0.6);
+      margin-bottom: 5px;
+    }
+
+    .map-container {
+      position: relative;
+      width: 1455px; 
+      height: 725px;  
+      margin: 20px auto 10px auto;
+      border: 3px solid #ff6600; 
+      box-shadow: 0 0 25px rgba(255, 102, 0, 0.15);
+      background-color: #050505;
+    }
+
+    .map-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      opacity: 0.7; 
+    }
+
+    .map-grid {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+    }
+
+    .sector {
+      fill: rgba(255, 102, 0, 0.01); 
+      stroke: rgba(255, 102, 0, 0.25); 
+      stroke-width: 0.02; 
+      cursor: pointer;
+      transition: fill 0.1s ease, stroke 0.1s ease;
+    }
+
+    .sector:hover {
+      fill: rgba(255, 102, 0, 0.25) !important; 
+      stroke: #ff9900;
+      stroke-width: 0.05;
+    }
+
+    /* Статусы секторов */
+    .sector.level-safe { fill: rgba(0, 255, 106, 0.251); stroke: rgba(0, 255, 0, 0.3); }
+    .sector.level-lowdanger { fill: rgba(119, 255, 0, 0.233); stroke: rgba(153, 255, 0, 0.4); }
+    .sector.level-minordanger { fill: rgba(234, 255, 46, 0.325); stroke: rgba(242, 255, 0, 0.4); }
+    .sector.level-moderatedanger { fill: rgba(255, 128, 0, 0.307); stroke: rgba(255, 165, 0, 0.4); }
+    .sector.level-highdanger { fill: rgba(255, 0, 0, 0.3); stroke: rgba(255, 0, 0, 0.5); }
+    .sector.level-unknown { fill: rgba(42, 41, 41, 0.18); stroke: rgba(35, 35, 35, 0.5); }
+    .sector.level-event { fill: rgba(0, 115, 255, 0.18); stroke: rgba(0, 140, 255, 0.5); }
+
+    .bottom-interface {
+      width: 1455px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .hazard-line {
+      width: 100%;
+      height: 12px;
+      background: repeating-linear-gradient(45deg, #ff6600, #ff6600 10px, #000000 10px, #000000 20px);
+      border: 1px solid #ff6600;
+    }
+
+    .footer-content {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .global-news {
+      font-size: 14px;
+      color: #ff6600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-left: 3px solid #ff6600;
+      padding-left: 15px;
+      margin-top: 5px;
+      max-width: 1000px;
+    }
+
+    .global-news span { color: #ffffff; }
+
+    .logo-container img {
+      width: 120px;
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 0 5px rgba(255, 102, 0, 0.5));
+    }
+
+    /* Окно информации */
+    .info-popup {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #0c0c0c; 
+      color: #ffffff;
+      padding: 30px;
+      border: 2px solid #ff6600; 
+      box-shadow: 0 0 40px rgba(255, 102, 0, 0.3);
+      z-index: 1000;
+      width: 420px;
+      box-sizing: border-box;
+    }
+
+    .info-popup h3 {
+      margin-top: 0;
+      font-size: 24px;
+      color: #ff6600; 
+      border-bottom: 2px solid #ff6600;
+      padding-bottom: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .info-popup p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #cccccc;
+      margin: 15px 0;
+    }
+
+    .info-popup img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      margin-top: 10px;
+      border: 1px solid #ff6600;
+    }
+
+    .close-btn {
+      margin-top: 20px;
+      background: #000000;
+      color: #ff6600;
+      border: 1px solid #ff6600;
+      padding: 12px;
+      cursor: pointer;
+      width: 100%;
+      font-family: 'Roboto Mono', monospace;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .close-btn:hover {
+      background: #ff6600;
+      color: #000000;
+      text-shadow: -2px 0 #00ffff, 2px 0 #ff00ff;
+    }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>SECTOR E13 TACTICAL OPERATIVE MAP</h1>
+
+  <div class="map-container">
+    <img src="https://raw.githubusercontent.com/ObdaloniStuart/ATF8-roblox-map-additional-stuff/refs/heads/main/ATF8_FullMap5.png" alt="SYSTEM OFFLINE, MAP IS NOT DOWNLOADED YET" class="map-image">
+    
+    <svg class="map-grid" viewBox="0 0 16 8" preserveAspectRatio="none">
+      
+      <!-- ========================================== -->
+      <!-- СЮДА ВСТАВЛЯТЬ СЕКТОРА (ИНСТРУКЦИЯ НИЖЕ)  -->
+      <!-- ========================================== -->
+       <!-- ROW-1)  -->
+        <rect class="sector level-unknown" x="0" y="0" width="1" height="1" data-name="Sector A-1" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="1" y="0" width="1" height="1" data-name="Sector A-2" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="2" y="0" width="1" height="1" data-name="Sector A-3" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="3" y="0" width="1" height="1" data-name="Sector A-4" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="4" y="0" width="1" height="1" data-name="Sector A-5" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="5" y="0" width="1" height="1" data-name="Sector A-6" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="6" y="0" width="1" height="1" data-name="Sector A-7" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="7" y="0" width="1" height="1" data-name="Sector A-8" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-lowdanger" x="8" y="0" width="1" height="1" data-name="Sector A-9" data-info="Risk level: low; No scavs|maradeurs; Biohazard level: low; Non-habitated area" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-lowdanger" x="9" y="0" width="1" height="1" data-name="Sector A-10" data-info="Risk level: low; No scavs|maradeurs; Biohazard level: low; Non-habitated area" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-lowdanger" x="10" y="0" width="1" height="1" data-name="Sector A-11" data-info="Risk level: low; No scavs|maradeurs; Biohazard level: low; Non-habitated area" data-img="https://raw.githubusercontent.com/ObdaloniStuart/ATF8-roblox-map-additional-stuff/refs/heads/main/sectorA-11.png" />
+        <rect class="sector level-unknown" x="11" y="0" width="1" height="1" data-name="Sector A-12" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="12" y="0" width="1" height="1" data-name="Sector A-13" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="13" y="0" width="1" height="1" data-name="Sector A-14" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="14" y="0" width="1" height="1" data-name="Sector A-15" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="15" y="0" width="1" height="1" data-name="Sector A-16" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+
+        <!-- ROW-2)  -->
+        <rect class="sector level-unknown" x="0" y="1" width="1" height="1" data-name="Sector B-1" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="1" y="1" width="1" height="1" data-name="Sector B-2" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="2" y="1" width="1" height="1" data-name="Sector B-3" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="3" y="1" width="1" height="1" data-name="Sector B-4" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="4" y="1" width="1" height="1" data-name="Sector B-5" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="5" y="1" width="1" height="1" data-name="Sector B-6" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="6" y="1" width="1" height="1" data-name="Sector B-7" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-lowdanger" x="7" y="1" width="1" height="1" data-name="Sector B-8" data-info="Risk level: low; Almost no scavs|maradeurs; Biohazard level: low" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-safe" x="8" y="1" width="1" height="1" data-name="Sector B-9" data-info="Risk level: safe; No scavs|maradeurs; Biohazard level: low; Friendly stronghold identified; Navspare detected" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-lowdanger" x="9" y="1" width="1" height="1" data-name="Sector B-10" data-info="Risk level: low; Almost no scavs|maradeurs; Biohazard level: low" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-safe" x="10" y="1" width="1" height="1" data-name="Sector B-11" data-info="Risk level: safe; Almost no scavs|maradeurs; Biohazard level: low; A.O.F. Headquarters identified" data-img="https://raw.githubusercontent.com/ObdaloniStuart/ATF8-roblox-map-additional-stuff/refs/heads/main/sectorB-11.png" />
+        <rect class="sector level-moderatedanger" x="11" y="1" width="1" height="1" data-name="Sector B-12" data-info="Risk level: moderate; Almost no scavs|maradeurs; Biohazard level: moderate; Infestation level: moderate" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="12" y="1" width="1" height="1" data-name="Sector B-13" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="13" y="1" width="1" height="1" data-name="Sector B-14" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="14" y="1" width="1" height="1" data-name="Sector B-15" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="15" y="1" width="1" height="1" data-name="Sector B-16" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+
+        <!-- ROW-3)  -->
+        <rect class="sector level-unknown" x="0" y="2" width="1" height="1" data-name="Sector C-1" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="1" y="2" width="1" height="1" data-name="Sector C-2" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="2" y="2" width="1" height="1" data-name="Sector C-3" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="3" y="2" width="1" height="1" data-name="Sector C-4" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="4" y="2" width="1" height="1" data-name="Sector C-5" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="5" y="2" width="1" height="1" data-name="Sector C-6" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="6" y="2" width="1" height="1" data-name="Sector C-7" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="7" y="2" width="1" height="1" data-name="Sector C-8" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-lowdanger" x="8" y="2" width="1" height="1" data-name="Sector C-9" data-info="Risk level: low; No scavs|maradeurs; Biohazard level: low; Non-habitated area" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-minordanger" x="9" y="2" width="1" height="1" data-name="Sector C-10" data-info="Risk level: minor; Some scavs|maradeurs; Biohazard level: minor; ||ANOMALY DETECTED -- EMP pulse causing minor damage to electronics in this area||" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-lowdanger" x="10" y="2" width="1" height="1" data-name="Sector C-11" data-info="Risk level: low; Almost no scavs|maradeurs; Biohazard level: low; ||DAMAGED NAVDART DETECTED -- repair requred||" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-highdanger" x="11" y="2" width="1" height="1" data-name="Sector C-12" data-info="Risk level: deadly; No scavs|maradeurs; Biohazard level: extreme; Infestation level: very high" data-img="https://raw.githubusercontent.com/ObdaloniStuart/ATF8-roblox-map-additional-stuff/refs/heads/main/sectorC-12.png" />
+        <rect class="sector level-highdanger" x="12" y="2" width="1" height="1" data-name="Sector C-13" data-info="Risk level: high; Almost no scavs|maradeurs; Biohazard level: moderate; Infestation level: high" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="13" y="2" width="1" height="1" data-name="Sector C-14" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="14" y="2" width="1" height="1" data-name="Sector C-15" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="15" y="2" width="1" height="1" data-name="Sector C-16" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+
+        <!-- ROW-4)  -->
+        <rect class="sector level-unknown" x="0" y="3" width="1" height="1" data-name="Sector D-1" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="1" y="3" width="1" height="1" data-name="Sector D-2" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="2" y="3" width="1" height="1" data-name="Sector D-3" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="3" y="3" width="1" height="1" data-name="Sector D-4" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="4" y="3" width="1" height="1" data-name="Sector D-5" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="5" y="3" width="1" height="1" data-name="Sector D-6" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="6" y="3" width="1" height="1" data-name="Sector D-7" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="7" y="3" width="1" height="1" data-name="Sector D-8" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-moderatedanger" x="8" y="3" width="1" height="1" data-name="Sector D-9" data-info="Risk level: moderate; Possible scavs|maradeurs; Biohazard level: low; bridge, not the safest place honestly" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-moderatedanger" x="9" y="3" width="1" height="1" data-name="Sector D-10" data-info="Risk level: moderate; Hostile stronghold identified; Biohazard level: low; ||ENEMY PATROLS DETECTED||; bridge, not the safest place honestly" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="10" y="3" width="1" height="1" data-name="Sector D-11" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="11" y="3" width="1" height="1" data-name="Sector D-12" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="12" y="3" width="1" height="1" data-name="Sector D-13" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="13" y="3" width="1" height="1" data-name="Sector D-14" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="14" y="3" width="1" height="1" data-name="Sector D-15" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="15" y="3" width="1" height="1" data-name="Sector D-16" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+
+        <!-- ROW-5)  -->
+        <rect class="sector level-unknown" x="0" y="4" width="1" height="1" data-name="Sector E-1" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="1" y="4" width="1" height="1" data-name="Sector E-2" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="2" y="4" width="1" height="1" data-name="Sector E-3" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="3" y="4" width="1" height="1" data-name="Sector E-4" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="4" y="4" width="1" height="1" data-name="Sector E-5" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="5" y="4" width="1" height="1" data-name="Sector E-6" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="6" y="4" width="1" height="1" data-name="Sector E-7" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="7" y="4" width="1" height="1" data-name="Sector E-8" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="8" y="4" width="1" height="1" data-name="Sector E-9" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="9" y="4" width="1" height="1" data-name="Sector E-10" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="10" y="4" width="1" height="1" data-name="Sector E-11" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="11" y="4" width="1" height="1" data-name="Sector E-12" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="12" y="4" width="1" height="1" data-name="Sector E-13" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="13" y="4" width="1" height="1" data-name="Sector E-14" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="14" y="4" width="1" height="1" data-name="Sector E-15" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="15" y="4" width="1" height="1" data-name="Sector E-16" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+
+        <!-- ROW-6)  -->
+        <rect class="sector level-unknown" x="0" y="5" width="1" height="1" data-name="Sector F-1" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="1" y="5" width="1" height="1" data-name="Sector F-2" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="2" y="5" width="1" height="1" data-name="Sector F-3" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="3" y="5" width="1" height="1" data-name="Sector F-4" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="4" y="5" width="1" height="1" data-name="Sector F-5" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="5" y="5" width="1" height="1" data-name="Sector F-6" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="6" y="5" width="1" height="1" data-name="Sector F-7" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="7" y="5" width="1" height="1" data-name="Sector F-8" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="8" y="5" width="1" height="1" data-name="Sector F-9" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="9" y="5" width="1" height="1" data-name="Sector F-10" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="10" y="5" width="1" height="1" data-name="Sector F-11" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="11" y="5" width="1" height="1" data-name="Sector F-12" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="12" y="5" width="1" height="1" data-name="Sector F-13" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="13" y="5" width="1" height="1" data-name="Sector F-14" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="14" y="5" width="1" height="1" data-name="Sector F-15" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="15" y="5" width="1" height="1" data-name="Sector F-16" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+
+        <!-- ROW-7)  -->
+        <rect class="sector level-unknown" x="0" y="6" width="1" height="1" data-name="Sector G-1" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="1" y="6" width="1" height="1" data-name="Sector G-2" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="2" y="6" width="1" height="1" data-name="Sector G-3" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="3" y="6" width="1" height="1" data-name="Sector G-4" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="4" y="6" width="1" height="1" data-name="Sector G-5" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="5" y="6" width="1" height="1" data-name="Sector G-6" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="6" y="6" width="1" height="1" data-name="Sector G-7" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="7" y="6" width="1" height="1" data-name="Sector G-8" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="8" y="6" width="1" height="1" data-name="Sector G-9" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="9" y="6" width="1" height="1" data-name="Sector G-10" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-event" x="10" y="6" width="1" height="1" data-name="Sector G-11" data-info="No data for now; ||AVAILABLE TASK: NAVSPARE REQURED||" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="11" y="6" width="1" height="1" data-name="Sector G-12" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="12" y="6" width="1" height="1" data-name="Sector G-13" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="13" y="6" width="1" height="1" data-name="Sector G-14" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="14" y="6" width="1" height="1" data-name="Sector G-15" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="15" y="6" width="1" height="1" data-name="Sector G-16" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+
+        <!-- ROW-8)  -->
+        <rect class="sector level-unknown" x="0" y="7" width="1" height="1" data-name="Sector H-1" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="1" y="7" width="1" height="1" data-name="Sector H-2" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="2" y="7" width="1" height="1" data-name="Sector H-3" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="3" y="7" width="1" height="1" data-name="Sector H-4" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="4" y="7" width="1" height="1" data-name="Sector H-5" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="5" y="7" width="1" height="1" data-name="Sector H-6" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="6" y="7" width="1" height="1" data-name="Sector H-7" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="7" y="7" width="1" height="1" data-name="Sector H-8" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="8" y="7" width="1" height="1" data-name="Sector H-9" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="9" y="7" width="1" height="1" data-name="Sector H-10" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="10" y="7" width="1" height="1" data-name="Sector H-11" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="11" y="7" width="1" height="1" data-name="Sector H-12" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="12" y="7" width="1" height="1" data-name="Sector H-13" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="13" y="7" width="1" height="1" data-name="Sector H-14" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="14" y="7" width="1" height="1" data-name="Sector H-15" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+        <rect class="sector level-unknown" x="15" y="7" width="1" height="1" data-name="Sector H-16" data-info="No data for now" data-img="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10" />
+
+
+    </svg>
+  </div>
+
+  <div class="bottom-interface">
+    <div class="hazard-line"></div>
+    <div class="footer-content">
+      <div class="logo-container">
+        <img src="dfvdf" alt="LOGO">
+      </div>
+      <div class="global-news">
+        Global modifier: <span>Nothing special for today, today's temp is -11 degrees in daytime and -27 degrees at night.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+  <div class="info-popup" id="popup">
+    <h3 id="popup-title">Sector</h3>
+    <p id="popup-text">loading data...</p>
+    <img id="popup-img" src="" alt="Observation footage">
+    <button class="close-btn" id="close-popup">CONFIRM AND CLOSE</button>
+  </div>
+
+  <script>
+    const popup = document.getElementById('popup');
+    const overlay = document.getElementById('overlay');
+    const popupTitle = document.getElementById('popup-title');
+    const popupText = document.getElementById('popup-text');
+    const popupImg = document.getElementById('popup-img');
+    const closeBtn = document.getElementById('close-popup');
+
+    document.querySelectorAll('.sector').forEach(sector => {
+      sector.addEventListener('click', () => {
+        const sName = sector.getAttribute('data-name') || "unknown sector";
+        const sInfo = sector.getAttribute('data-info') || "The info may be censored or deleted";
+        const sImg = sector.getAttribute('data-img') || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_9eQWgPYch5uvv8G1uWSrUG58zNmRRpRmvxf6kGDklg&s=10";
+        
+        popupTitle.textContent = sName;
+        popupText.textContent = sInfo;
+        popupImg.src = sImg;
+        
+        popup.style.display = 'block';
+        overlay.style.display = 'block';
+      });
+    });
+
+    function closePopup() {
+      popup.style.display = 'none';
+      overlay.style.display = 'none';
+    }
+
+    closeBtn.addEventListener('click', closePopup);
+    overlay.addEventListener('click', closePopup);
+  </script>
+</body>
+</html>
